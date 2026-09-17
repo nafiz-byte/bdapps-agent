@@ -49,7 +49,7 @@ def test_combined_total_follows_last_account_and_failures_come_last():
     sections = build_sections(reports, SEPT)
     assert len(sections) == 4  # header, u1, u2 + combined total, failures
     assert sections[2].endswith(
-        "▫️Two: <b>BDT 500</b>\n━━━━━━━━━━━━\n🧮<b>All accounts</b> (2/3):\n💰Total: <b>BDT 1,500</b> (approx)"
+        "▫️Two: <b>BDT 500</b>\n━━━━━━━━━━━━\n🧮<b>All accounts</b> (2/3):\n💰Total: <b>BDT 1,500</b>"
     )
     assert sections[3] == "⚠️<b>Acc- u3</b>: login failed"
 
@@ -94,7 +94,7 @@ def test_dynamic_text_is_escaped_everywhere():
         assert not re.search(r"&(?!amp;|lt;|gt;|quot;)", without_tags)
 
 
-def test_net_line_closes_the_report_and_is_not_repeated_per_account():
+def test_netpay_closes_the_report_and_is_not_repeated_per_account():
     reports = [
         AccountReport(name="a", username="u1", apps=[_app("One", 30.0), _app("Two", 45.0)]),
         AccountReport(name="b", username="u2", apps=[_app("Three", 25.0)]),
@@ -107,26 +107,26 @@ def test_net_line_closes_the_report_and_is_not_repeated_per_account():
         "▫️One: <b>BDT 30</b>",
     ]
     # The 40% share is stated once, after the combined total.
-    assert sections[2].endswith("💰Total: <b>BDT 100</b> (approx)\n💵Net: <b>BDT 40</b>")
-    assert sum(section.count("💵Net:") for section in sections) == 1
+    assert sections[2].endswith("💰Total: <b>BDT 100</b>\n💵NetPay: <b>BDT 40</b>")
+    assert sum(section.count("💵NetPay:") for section in sections) == 1
 
 
-def test_net_line_still_closes_a_single_account_report():
+def test_netpay_still_closes_a_single_account_report():
     reports = [AccountReport(name="a", username="u1", apps=[_app("One", 50.0)])]
     sections = build_sections(reports, SEPT, share_percent=40.0)
-    # No "All accounts" block for one account, but the Net line is still wanted.
+    # No "All accounts" block for one account, but the NetPay line is still wanted.
     assert "All accounts" not in sections[1]
-    assert sections[1].endswith("▫️One: <b>BDT 50</b>\n━━━━━━━━━━━━\n💵Net: <b>BDT 20</b>")
+    assert sections[1].endswith("▫️One: <b>BDT 50</b>\n━━━━━━━━━━━━\n💵NetPay: <b>BDT 20</b>")
 
 
-def test_share_percent_defaults_to_no_net_line():
+def test_share_percent_defaults_to_no_netpay_line():
     reports = [
         AccountReport(name="a", username="u1", apps=[_app("One", 100.0)]),
         AccountReport(name="b", username="u2", apps=[_app("Two", 50.0)]),
     ]
     with_default = build_sections(reports, SEPT)
     assert with_default == build_sections(reports, SEPT, share_percent=100.0)
-    assert not any("Net" in section for section in with_default)
+    assert not any("NetPay" in section for section in with_default)
 
 
 def test_format_messages_splits_when_too_long():

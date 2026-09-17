@@ -79,14 +79,14 @@ ACCOUNT_1_PASSWORD=pass1
 করলেই হবে — `config.py` স্বয়ংক্রিয়ভাবে ডিটেক্ট করবে, **কোডে হাত দেওয়া লাগবে
 না**। রিপোর্টে account দেখাবে "Acc- username" হিসেবে।
 
-## ৩ক. "Net" — কমিশন বাদ দিয়ে হাতে আসা টাকা
+## ৩ক. "NetPay" — কমিশন বাদ দিয়ে হাতে আসা টাকা
 
 bdapps-এর রিপোর্টে যে revenue দেখায় তার পুরোটা হাতে আসে না। `.env`-এ
 `REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — রিপোর্টের একদম
-**শেষে** একটা **Net** লাইনে সব account মিলিয়ে ততটুকু দেখাবে:
+**শেষে** একটা **NetPay** লাইনে সব account মিলিয়ে ততটুকু দেখাবে:
 
 ```
-REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Net লাইনে ৪০% দেখাবে
+REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, NetPay লাইনে ৪০% দেখাবে
 ```
 
 রিপোর্টে যেভাবে আসবে:
@@ -102,19 +102,19 @@ REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Net লাইনে ৪০% �
 ▫️Daily News: BDT 5,100
 ━━━━━━━━━━━━
 🧮All accounts (2/2):
-💰Total: BDT 16,750 (approx)
-💵Net: BDT 6,700
+💰Total: BDT 16,750
+💵NetPay: BDT 6,700
 ```
 
 - **বাকি সব লাইনে portal-এর আসল সংখ্যাই থাকে**, যাতে portal-এর সাথে মিলিয়ে
-  দেখা যায়; শুধু শেষের Net লাইনটা কমিশন বাদ দেওয়া।
+  দেখা যায়; শুধু শেষের NetPay লাইনটা কমিশন বাদ দেওয়া।
 - Total-এর পাশের `(৭০%)` মানে ঐ account-টা সব account মিলিয়ে কত অংশ — এটা আসল
   সংখ্যা থেকে হিসাব হয়, `REVENUE_SHARE_PERCENT`-এর সাথে এর সম্পর্ক নেই।
-- মান না দিলে (বা `100` দিলে) কোনো Net লাইনই আসবে না, আগের মতোই থাকবে।
-- একটা account থাকলে "All accounts" ব্লকটা আসে না, তখন Net লাইনটা ঐ account-এর
-  শেষেই যোগ হয়।
+- মান না দিলে (বা `100` দিলে) কোনো NetPay লাইনই আসবে না, আগের মতোই থাকবে।
+- একটা account থাকলে "All accounts" ব্লকটা আসে না, তখন NetPay লাইনটা ঐ
+  account-এর শেষেই যোগ হয়।
 - GitHub Actions-এ চালালে এটাকেও একটা **secret** হিসেবে যোগ করতে হবে (নিচের
-  ৫ক দেখুন), নইলে Net লাইন আসবে না।
+  ৫ক দেখুন), নইলে NetPay লাইন আসবে না।
 
 ## ৪. লোকালি রান/টেস্ট করা
 
@@ -160,7 +160,7 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
    `ACCOUNT_2_USERNAME`, `ACCOUNT_2_PASSWORD`,
    `ACCOUNT_3_USERNAME`, `ACCOUNT_3_PASSWORD`,
    `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`,
-   `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে Net লাইন আসবে না)।
+   `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে NetPay লাইন আসবে না)।
    নতুন account যোগ করলে `ACCOUNT_4_...` secrets যোগ করুন এবং
    `.github/workflows/daily-report.yml`-এ সেই env লাইনগুলোও যোগ করুন।
 3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন

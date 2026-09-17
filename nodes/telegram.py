@@ -50,13 +50,13 @@ def _account_label(acc: AccountReport) -> str:
 
 
 def _net_line(total: float, share_percent: float) -> List[str]:
-    """The report's closing "Net" line, or nothing when the full amount is kept.
+    """The report's closing "NetPay" line, or nothing when the full amount is kept.
 
-    At share_percent 100 a Net line would just repeat the Total above it.
+    At share_percent 100 a NetPay line would just repeat the Total above it.
     """
     if share_percent >= 100:
         return []
-    return [f"💵Net: <b>{format_bdt(total * share_percent / 100)}</b>"]
+    return [f"💵NetPay: <b>{format_bdt(total * share_percent / 100)}</b>"]
 
 
 def _account_section(acc: AccountReport, grand_total: float) -> str:
@@ -82,8 +82,8 @@ def build_sections(
 ) -> List[str]:
     """Return the report as HTML sections: [header, account..., failures?].
 
-    share_percent (default 100, i.e. no Net line at all) adds one closing
-    "Net" line for the earned share of every account's revenue combined.
+    share_percent (default 100, i.e. no NetPay line at all) adds one closing
+    "NetPay" line for the earned share of every account's revenue combined.
     """
     ok = [acc for acc in account_reports if not acc.error]
     failed = [acc for acc in account_reports if acc.error]
@@ -94,12 +94,12 @@ def build_sections(
         accounts[0] = "Monthly:\n" + accounts[0]
         net = _net_line(grand_total, share_percent)
         # With a single account the combined total would just repeat it, but
-        # the closing Net line is still wanted.
+        # the closing NetPay line is still wanted.
         if len(ok) > 1:
             accounts[-1] += "\n" + "\n".join([
                 _DIVIDER,
                 f"🧮<b>All accounts</b> ({len(ok)}/{len(account_reports)}):",
-                f"💰Total: <b>{format_bdt(grand_total)}</b> (approx)",
+                f"💰Total: <b>{format_bdt(grand_total)}</b>",
                 *net,
             ])
         elif net:
