@@ -94,19 +94,29 @@ def test_dynamic_text_is_escaped_everywhere():
         assert not re.search(r"&(?!amp;|lt;|gt;|quot;)", without_tags)
 
 
-def test_share_percent_adds_net_line_under_each_total():
+def test_net_line_closes_the_report_and_is_not_repeated_per_account():
     reports = [
         AccountReport(name="a", username="u1", apps=[_app("One", 30.0), _app("Two", 45.0)]),
         AccountReport(name="b", username="u2", apps=[_app("Three", 25.0)]),
     ]
     sections = build_sections(reports, SEPT, share_percent=40.0)
-    lines = sections[1].splitlines()
-    # Gross total and per-app lines stay as the portal reports them; Net is the 40% share.
-    assert lines[2] == "💰Total: <b>BDT 75</b> (75%)"
-    assert lines[3] == "💵Net: <b>BDT 30</b>"
-    assert lines[4] == "▫️Two: <b>BDT 45</b>"
-    assert lines[5] == "▫️One: <b>BDT 30</b>"
+    # Every account figure stays gross, exactly as the portal reports it.
+    assert sections[1].splitlines()[2:] == [
+        "💰Total: <b>BDT 75</b> (75%)",
+        "▫️Two: <b>BDT 45</b>",
+        "▫️One: <b>BDT 30</b>",
+    ]
+    # The 40% share is stated once, after the combined total.
     assert sections[2].endswith("💰Total: <b>BDT 100</b> (approx)\n💵Net: <b>BDT 40</b>")
+    assert sum(section.count("💵Net:") for section in sections) == 1
+
+
+def test_net_line_still_closes_a_single_account_report():
+    reports = [AccountReport(name="a", username="u1", apps=[_app("One", 50.0)])]
+    sections = build_sections(reports, SEPT, share_percent=40.0)
+    # No "All accounts" block for one account, but the Net line is still wanted.
+    assert "All accounts" not in sections[1]
+    assert sections[1].endswith("▫️One: <b>BDT 50</b>\n━━━━━━━━━━━━\n💵Net: <b>BDT 20</b>")
 
 
 def test_share_percent_defaults_to_no_net_line():

@@ -50,7 +50,7 @@ def _account_label(acc: AccountReport) -> str:
 
 
 def _net_line(total: float, share_percent: float) -> List[str]:
-    """The "Net" line for a total, or nothing when the full amount is kept.
+    """The report's closing "Net" line, or nothing when the full amount is kept.
 
     At share_percent 100 a Net line would just repeat the Total above it.
     """
@@ -59,20 +59,19 @@ def _net_line(total: float, share_percent: float) -> List[str]:
     return [f"💵Net: <b>{format_bdt(total * share_percent / 100)}</b>"]
 
 
-def _account_section(acc: AccountReport, grand_total: float, share_percent: float) -> str:
-    """One account: label, total, net, then each app, highest revenue first.
+def _account_section(acc: AccountReport, grand_total: float) -> str:
+    """One account: label, total (with share of grand total), then each app, highest revenue first.
 
-    Total and the per-app lines are the portal's own (gross) figures, so the
-    report can be checked against the portal; the Net line below Total is the
-    share actually earned (share_percent, e.g. 40 for a 60% cut). The
-    percentage-of-grand-total is computed from the gross totals.
+    Every figure here is the portal's own (gross) amount, so the report can be
+    checked against the portal. The earned share appears once, at the end of
+    the report -- see build_sections.
     """
     total = acc.total_revenue
     total_line = f"💰Total: <b>{format_bdt(total)}</b>"
     if grand_total > 0:
         total_line += f" ({round(total / grand_total * 100)}%)"
 
-    lines = [f"🔹{_account_label(acc)}", total_line, *_net_line(total, share_percent)]
+    lines = [f"🔹{_account_label(acc)}", total_line]
     for app in sorted(acc.apps, key=lambda a: float(a.get("revenue", 0.0)), reverse=True):
         lines.append(f"▫️{_esc(app.get('app_name', '-'))}: <b>{format_bdt(float(app.get('revenue', 0.0)))}</b>")
     return "\n".join(lines)
@@ -83,24 +82,28 @@ def build_sections(
 ) -> List[str]:
     """Return the report as HTML sections: [header, account..., failures?].
 
-    share_percent (default 100, i.e. no Net lines at all) adds the earned
-    share under each "Total" -- see _account_section.
+    share_percent (default 100, i.e. no Net line at all) adds one closing
+    "Net" line for the earned share of every account's revenue combined.
     """
     ok = [acc for acc in account_reports if not acc.error]
     failed = [acc for acc in account_reports if acc.error]
     grand_total = sum(acc.total_revenue for acc in ok)
 
-    accounts = [_account_section(acc, grand_total, share_percent) for acc in ok]
+    accounts = [_account_section(acc, grand_total) for acc in ok]
     if accounts:
         accounts[0] = "Monthly:\n" + accounts[0]
-        # With a single account the combined total would just repeat it.
+        net = _net_line(grand_total, share_percent)
+        # With a single account the combined total would just repeat it, but
+        # the closing Net line is still wanted.
         if len(ok) > 1:
             accounts[-1] += "\n" + "\n".join([
                 _DIVIDER,
                 f"🧮<b>All accounts</b> ({len(ok)}/{len(account_reports)}):",
                 f"💰Total: <b>{format_bdt(grand_total)}</b> (approx)",
-                *_net_line(grand_total, share_percent),
+                *net,
             ])
+        elif net:
+            accounts[-1] += "\n" + "\n".join([_DIVIDER, *net])
 
     header = f"📊 <b>BDApps Revenue Report</b>\n📅 {date_range.date_to.day} {date_range.date_to:%B %Y}"
     sections = [header, *accounts]

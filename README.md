@@ -82,9 +82,8 @@ ACCOUNT_1_PASSWORD=pass1
 ## ৩ক. "Net" — কমিশন বাদ দিয়ে হাতে আসা টাকা
 
 bdapps-এর রিপোর্টে যে revenue দেখায় তার পুরোটা হাতে আসে না। `.env`-এ
-`REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — প্রতিটা **Total**-এর
-নিচে একটা **Net** লাইনে ততটুকু দেখাবে (per-account আর "All accounts", দুই
-জায়গাতেই):
+`REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — রিপোর্টের একদম
+**শেষে** একটা **Net** লাইনে সব account মিলিয়ে ততটুকু দেখাবে:
 
 ```
 REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Net লাইনে ৪০% দেখাবে
@@ -95,16 +94,25 @@ REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Net লাইনে ৪০% �
 ```
 🔹Acc- nafiz01
 💰Total: BDT 11,650 (70%)
-💵Net: BDT 4,660
 ▫️Quiz Master: BDT 8,450
 ▫️Islamic Tips: BDT 3,200
+
+🔹Acc- nafiz02
+💰Total: BDT 5,100 (30%)
+▫️Daily News: BDT 5,100
+━━━━━━━━━━━━
+🧮All accounts (2/2):
+💰Total: BDT 16,750 (approx)
+💵Net: BDT 6,700
 ```
 
-- **Total আর per-app লাইনে portal-এর আসল সংখ্যাই থাকে**, যাতে portal-এর সাথে
-  মিলিয়ে দেখা যায়; শুধু Net লাইনটা কমিশন বাদ দেওয়া।
+- **বাকি সব লাইনে portal-এর আসল সংখ্যাই থাকে**, যাতে portal-এর সাথে মিলিয়ে
+  দেখা যায়; শুধু শেষের Net লাইনটা কমিশন বাদ দেওয়া।
 - Total-এর পাশের `(৭০%)` মানে ঐ account-টা সব account মিলিয়ে কত অংশ — এটা আসল
   সংখ্যা থেকে হিসাব হয়, `REVENUE_SHARE_PERCENT`-এর সাথে এর সম্পর্ক নেই।
 - মান না দিলে (বা `100` দিলে) কোনো Net লাইনই আসবে না, আগের মতোই থাকবে।
+- একটা account থাকলে "All accounts" ব্লকটা আসে না, তখন Net লাইনটা ঐ account-এর
+  শেষেই যোগ হয়।
 - GitHub Actions-এ চালালে এটাকেও একটা **secret** হিসেবে যোগ করতে হবে (নিচের
   ৫ক দেখুন), নইলে Net লাইন আসবে না।
 
