@@ -79,24 +79,34 @@ ACCOUNT_1_PASSWORD=pass1
 করলেই হবে — `config.py` স্বয়ংক্রিয়ভাবে ডিটেক্ট করবে, **কোডে হাত দেওয়া লাগবে
 না**। রিপোর্টে account দেখাবে "Acc- username" হিসেবে।
 
-## ৩ক. Total-এ নিজের ভাগ (কমিশন বাদ) দেখানো
+## ৩ক. "Net" — কমিশন বাদ দিয়ে হাতে আসা টাকা
 
 bdapps-এর রিপোর্টে যে revenue দেখায় তার পুরোটা হাতে আসে না। `.env`-এ
-`REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — Telegram রিপোর্টের
-**"Total" লাইনগুলোতে** (per-account আর "All accounts", দুই জায়গাতেই) তখন সেই
-percent-টুকুই দেখাবে:
+`REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — প্রতিটা **Total**-এর
+নিচে একটা **Net** লাইনে ততটুকু দেখাবে (per-account আর "All accounts", দুই
+জায়গাতেই):
 
 ```
-REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Total-এ ৪০% দেখাবে
+REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Net লাইনে ৪০% দেখাবে
 ```
 
-- **per-app লাইনগুলো বদলায় না** — সেখানে portal-এর আসল সংখ্যাই থাকে, যাতে
-  portal-এর সাথে মিলিয়ে দেখা যায়।
-- Total-এর পাশের `(৭৫%)` মানে ঐ account-টা সব account মিলিয়ে কত অংশ — এটা আসল
-  সংখ্যা থেকে হিসাব হয়, তাই `REVENUE_SHARE_PERCENT` বদলালেও ওটা বদলায় না।
-- মান না দিলে (বা `100` দিলে) আগের মতোই পুরো টাকা দেখাবে।
+রিপোর্টে যেভাবে আসবে:
+
+```
+🔹Acc- nafiz01
+💰Total: BDT 11,650 (70%)
+💵Net: BDT 4,660
+▫️Quiz Master: BDT 8,450
+▫️Islamic Tips: BDT 3,200
+```
+
+- **Total আর per-app লাইনে portal-এর আসল সংখ্যাই থাকে**, যাতে portal-এর সাথে
+  মিলিয়ে দেখা যায়; শুধু Net লাইনটা কমিশন বাদ দেওয়া।
+- Total-এর পাশের `(৭০%)` মানে ঐ account-টা সব account মিলিয়ে কত অংশ — এটা আসল
+  সংখ্যা থেকে হিসাব হয়, `REVENUE_SHARE_PERCENT`-এর সাথে এর সম্পর্ক নেই।
+- মান না দিলে (বা `100` দিলে) কোনো Net লাইনই আসবে না, আগের মতোই থাকবে।
 - GitHub Actions-এ চালালে এটাকেও একটা **secret** হিসেবে যোগ করতে হবে (নিচের
-  ৫ক দেখুন), নইলে রিপোর্টে পুরো টাকাই দেখাবে।
+  ৫ক দেখুন), নইলে Net লাইন আসবে না।
 
 ## ৪. লোকালি রান/টেস্ট করা
 
@@ -142,8 +152,7 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
    `ACCOUNT_2_USERNAME`, `ACCOUNT_2_PASSWORD`,
    `ACCOUNT_3_USERNAME`, `ACCOUNT_3_PASSWORD`,
    `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`,
-   `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে Total-এ পুরো টাকা
-   দেখাবে)।
+   `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে Net লাইন আসবে না)।
    নতুন account যোগ করলে `ACCOUNT_4_...` secrets যোগ করুন এবং
    `.github/workflows/daily-report.yml`-এ সেই env লাইনগুলোও যোগ করুন।
 3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন

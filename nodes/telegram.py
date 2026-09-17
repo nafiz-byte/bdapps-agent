@@ -49,20 +49,30 @@ def _account_label(acc: AccountReport) -> str:
     return f"<b>Acc- {_esc(acc.username)}</b>"
 
 
-def _account_section(acc: AccountReport, grand_total: float, share_percent: float) -> str:
-    """One account: label, total (with share of grand total), then each app, highest revenue first.
+def _net_line(total: float, share_percent: float) -> List[str]:
+    """The "Net" line for a total, or nothing when the full amount is kept.
 
-    share_percent scales only the displayed "Total" figure (e.g. 40 shows 40%
-    of the scraped total, i.e. a 60% cut). The percentage-of-grand-total is
-    computed from the unscaled totals, so it is unaffected by share_percent.
-    Per-app lines always show the raw, unscaled revenue.
+    At share_percent 100 a Net line would just repeat the Total above it.
+    """
+    if share_percent >= 100:
+        return []
+    return [f"💵Net: <b>{format_bdt(total * share_percent / 100)}</b>"]
+
+
+def _account_section(acc: AccountReport, grand_total: float, share_percent: float) -> str:
+    """One account: label, total, net, then each app, highest revenue first.
+
+    Total and the per-app lines are the portal's own (gross) figures, so the
+    report can be checked against the portal; the Net line below Total is the
+    share actually earned (share_percent, e.g. 40 for a 60% cut). The
+    percentage-of-grand-total is computed from the gross totals.
     """
     total = acc.total_revenue
-    total_line = f"💰Total: <b>{format_bdt(total * share_percent / 100)}</b>"
+    total_line = f"💰Total: <b>{format_bdt(total)}</b>"
     if grand_total > 0:
         total_line += f" ({round(total / grand_total * 100)}%)"
 
-    lines = [f"🔹{_account_label(acc)}", total_line]
+    lines = [f"🔹{_account_label(acc)}", total_line, *_net_line(total, share_percent)]
     for app in sorted(acc.apps, key=lambda a: float(a.get("revenue", 0.0)), reverse=True):
         lines.append(f"▫️{_esc(app.get('app_name', '-'))}: <b>{format_bdt(float(app.get('revenue', 0.0)))}</b>")
     return "\n".join(lines)
@@ -73,8 +83,8 @@ def build_sections(
 ) -> List[str]:
     """Return the report as HTML sections: [header, account..., failures?].
 
-    share_percent (default 100, i.e. no change) scales only "Total" lines --
-    see _account_section.
+    share_percent (default 100, i.e. no Net lines at all) adds the earned
+    share under each "Total" -- see _account_section.
     """
     ok = [acc for acc in account_reports if not acc.error]
     failed = [acc for acc in account_reports if acc.error]
@@ -88,7 +98,8 @@ def build_sections(
             accounts[-1] += "\n" + "\n".join([
                 _DIVIDER,
                 f"🧮<b>All accounts</b> ({len(ok)}/{len(account_reports)}):",
-                f"💰Total: <b>{format_bdt(grand_total * share_percent / 100)}</b> (approx)",
+                f"💰Total: <b>{format_bdt(grand_total)}</b> (approx)",
+                *_net_line(grand_total, share_percent),
             ])
 
     header = f"📊 <b>BDApps Revenue Report</b>\n📅 {date_range.date_to.day} {date_range.date_to:%B %Y}"

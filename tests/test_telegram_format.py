@@ -94,26 +94,29 @@ def test_dynamic_text_is_escaped_everywhere():
         assert not re.search(r"&(?!amp;|lt;|gt;|quot;)", without_tags)
 
 
-def test_share_percent_scales_total_lines_only():
+def test_share_percent_adds_net_line_under_each_total():
     reports = [
         AccountReport(name="a", username="u1", apps=[_app("One", 30.0), _app("Two", 45.0)]),
         AccountReport(name="b", username="u2", apps=[_app("Three", 25.0)]),
     ]
     sections = build_sections(reports, SEPT, share_percent=40.0)
     lines = sections[1].splitlines()
-    # Total is scaled to 40%, percentage-of-grand-total is unaffected, per-app lines are untouched.
-    assert lines[2] == "💰Total: <b>BDT 30</b> (75%)"
-    assert lines[3] == "▫️Two: <b>BDT 45</b>"
-    assert lines[4] == "▫️One: <b>BDT 30</b>"
-    assert sections[2].endswith("💰Total: <b>BDT 40</b> (approx)")
+    # Gross total and per-app lines stay as the portal reports them; Net is the 40% share.
+    assert lines[2] == "💰Total: <b>BDT 75</b> (75%)"
+    assert lines[3] == "💵Net: <b>BDT 30</b>"
+    assert lines[4] == "▫️Two: <b>BDT 45</b>"
+    assert lines[5] == "▫️One: <b>BDT 30</b>"
+    assert sections[2].endswith("💰Total: <b>BDT 100</b> (approx)\n💵Net: <b>BDT 40</b>")
 
 
-def test_share_percent_defaults_to_no_change():
-    reports = [AccountReport(name="a", username="u", apps=[_app("One", 100.0)])]
+def test_share_percent_defaults_to_no_net_line():
+    reports = [
+        AccountReport(name="a", username="u1", apps=[_app("One", 100.0)]),
+        AccountReport(name="b", username="u2", apps=[_app("Two", 50.0)]),
+    ]
     with_default = build_sections(reports, SEPT)
-    with_explicit_100 = build_sections(reports, SEPT, share_percent=100.0)
-    assert with_default == with_explicit_100
-    assert "BDT 100" in with_default[1]
+    assert with_default == build_sections(reports, SEPT, share_percent=100.0)
+    assert not any("Net" in section for section in with_default)
 
 
 def test_format_messages_splits_when_too_long():
