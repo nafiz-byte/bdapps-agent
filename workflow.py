@@ -64,7 +64,9 @@ def run(config: Config, send: bool = True) -> Tuple[List[AccountReport], DateRan
     reports = [process_account(account, date_range) for account in config.accounts]
 
     if send:
-        send_report(config.telegram_token, config.telegram_chat_id, reports, date_range)
+        send_report(
+            config.telegram_token, config.telegram_chat_id, reports, date_range, config.revenue_share_percent
+        )
         logger.info("Report sent to Telegram for %d account(s)", len(reports))
     return reports, date_range
 
@@ -85,7 +87,7 @@ def main() -> int:
 
     if args.preview:
         reports, date_range = run(config, send=False)
-        for message in format_messages(reports, date_range):
+        for message in format_messages(reports, date_range, config.revenue_share_percent):
             print(message)
         return 0
 

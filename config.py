@@ -39,6 +39,7 @@ class Config:
     telegram_chat_id: str
     report_time: str
     timezone: str
+    revenue_share_percent: float
     accounts: List[Account]
     debug_dir: Path
     log_file: Path
@@ -85,6 +86,16 @@ def load_config(env_file: Optional[str] = None) -> Config:
     if not telegram_token or not telegram_chat_id:
         raise ConfigError("TELEGRAM_TOKEN এবং TELEGRAM_CHAT_ID .env-এ সেট করা আবশ্যক।")
 
+    revenue_share_raw = os.environ.get("REVENUE_SHARE_PERCENT", "100").strip() or "100"
+    try:
+        revenue_share_percent = float(revenue_share_raw)
+    except ValueError as exc:
+        raise ConfigError(
+            f"REVENUE_SHARE_PERCENT-এর মান সংখ্যা হতে হবে, পাওয়া গেছে: {revenue_share_raw!r}"
+        ) from exc
+    if not (0 <= revenue_share_percent <= 100):
+        raise ConfigError("REVENUE_SHARE_PERCENT-এর মান ০ থেকে ১০০-এর মধ্যে হতে হবে।")
+
     debug_dir = BASE_DIR / "debug"
     debug_dir.mkdir(exist_ok=True)
 
@@ -93,6 +104,7 @@ def load_config(env_file: Optional[str] = None) -> Config:
         telegram_chat_id=telegram_chat_id,
         report_time=os.environ.get("REPORT_TIME", "06:00").strip(),
         timezone=os.environ.get("TIMEZONE", "Asia/Dhaka").strip(),
+        revenue_share_percent=revenue_share_percent,
         accounts=accounts,
         debug_dir=debug_dir,
         log_file=BASE_DIR / "workflow.log",

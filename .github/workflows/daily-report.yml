@@ -31,3 +31,4 @@ jobs:
           ACCOUNT_3_PASSWORD: ${{ secrets.ACCOUNT_3_PASSWORD }}
           # New account: add ACCOUNT_4_USERNAME / ACCOUNT_4_PASSWORD here and as repo secrets.
           TIMEZONE: "Asia/Dhaka"
+          REVENUE_SHARE_PERCENT: ${{ secrets.REVENUE_SHARE_PERCENT }}

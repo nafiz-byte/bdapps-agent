@@ -49,10 +49,16 @@ def _account_label(acc: AccountReport) -> str:
     return f"<b>Acc- {_esc(acc.username)}</b>"
 
 
-def _account_section(acc: AccountReport, grand_total: float) -> str:
-    """One account: label, total (with share of grand total), then each app, highest revenue first."""
+def _account_section(acc: AccountReport, grand_total: float, share_percent: float) -> str:
+    """One account: label, total (with share of grand total), then each app, highest revenue first.
+
+    share_percent scales only the displayed "Total" figure (e.g. 40 shows 40%
+    of the scraped total, i.e. a 60% cut). The percentage-of-grand-total is
+    computed from the unscaled totals, so it is unaffected by share_percent.
+    Per-app lines always show the raw, unscaled revenue.
+    """
     total = acc.total_revenue
-    total_line = f"💰Total: <b>{format_bdt(total)}</b>"
+    total_line = f"💰Total: <b>{format_bdt(total * share_percent / 100)}</b>"
     if grand_total > 0:
         total_line += f" ({round(total / grand_total * 100)}%)"
 
@@ -62,13 +68,19 @@ def _account_section(acc: AccountReport, grand_total: float) -> str:
     return "\n".join(lines)
 
 
-def build_sections(account_reports: List[AccountReport], date_range: DateRange) -> List[str]:
-    """Return the report as HTML sections: [header, account..., failures?]."""
+def build_sections(
+    account_reports: List[AccountReport], date_range: DateRange, share_percent: float = 100.0
+) -> List[str]:
+    """Return the report as HTML sections: [header, account..., failures?].
+
+    share_percent (default 100, i.e. no change) scales only "Total" lines --
+    see _account_section.
+    """
     ok = [acc for acc in account_reports if not acc.error]
     failed = [acc for acc in account_reports if acc.error]
     grand_total = sum(acc.total_revenue for acc in ok)
 
-    accounts = [_account_section(acc, grand_total) for acc in ok]
+    accounts = [_account_section(acc, grand_total, share_percent) for acc in ok]
     if accounts:
         accounts[0] = "Monthly:\n" + accounts[0]
         # With a single account the combined total would just repeat it.
@@ -76,7 +88,7 @@ def build_sections(account_reports: List[AccountReport], date_range: DateRange) 
             accounts[-1] += "\n" + "\n".join([
                 _DIVIDER,
                 f"🧮<b>All accounts</b> ({len(ok)}/{len(account_reports)}):",
-                f"💰Total: <b>{format_bdt(grand_total)}</b> (approx)",
+                f"💰Total: <b>{format_bdt(grand_total * share_percent / 100)}</b> (approx)",
             ])
 
     header = f"📊 <b>BDApps Revenue Report</b>\n📅 {date_range.date_to.day} {date_range.date_to:%B %Y}"
@@ -102,9 +114,13 @@ def _fit(section: str) -> List[str]:
     return pieces
 
 
-def format_messages(account_reports: List[AccountReport], date_range: DateRange) -> List[str]:
+def format_messages(
+    account_reports: List[AccountReport], date_range: DateRange, share_percent: float = 100.0
+) -> List[str]:
     """Pack report sections into one or more Telegram HTML messages (<=4096 chars each)."""
-    sections = [piece for section in build_sections(account_reports, date_range) for piece in _fit(section)]
+    sections = [
+        piece for section in build_sections(account_reports, date_range, share_percent) for piece in _fit(section)
+    ]
     messages: List[str] = []
     current: List[str] = []
     current_len = 0
@@ -121,9 +137,15 @@ def format_messages(account_reports: List[AccountReport], date_range: DateRange)
     return messages
 
 
-def send_report(token: str, chat_id: str, account_reports: List[AccountReport], date_range: DateRange) -> None:
+def send_report(
+    token: str,
+    chat_id: str,
+    account_reports: List[AccountReport],
+    date_range: DateRange,
+    share_percent: float = 100.0,
+) -> None:
     """Format and send the full report to a Telegram chat, splitting into multiple messages if needed."""
-    for message in format_messages(account_reports, date_range):
+    for message in format_messages(account_reports, date_range, share_percent):
         _send_message(token, chat_id, message)
 
 

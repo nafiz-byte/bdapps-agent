@@ -79,6 +79,25 @@ ACCOUNT_1_PASSWORD=pass1
 করলেই হবে — `config.py` স্বয়ংক্রিয়ভাবে ডিটেক্ট করবে, **কোডে হাত দেওয়া লাগবে
 না**। রিপোর্টে account দেখাবে "Acc- username" হিসেবে।
 
+## ৩ক. Total-এ নিজের ভাগ (কমিশন বাদ) দেখানো
+
+bdapps-এর রিপোর্টে যে revenue দেখায় তার পুরোটা হাতে আসে না। `.env`-এ
+`REVENUE_SHARE_PERCENT` দিয়ে বলে দিন হাতে কত percent আসে — Telegram রিপোর্টের
+**"Total" লাইনগুলোতে** (per-account আর "All accounts", দুই জায়গাতেই) তখন সেই
+percent-টুকুই দেখাবে:
+
+```
+REVENUE_SHARE_PERCENT=40      # ৬০% বাদ, Total-এ ৪০% দেখাবে
+```
+
+- **per-app লাইনগুলো বদলায় না** — সেখানে portal-এর আসল সংখ্যাই থাকে, যাতে
+  portal-এর সাথে মিলিয়ে দেখা যায়।
+- Total-এর পাশের `(৭৫%)` মানে ঐ account-টা সব account মিলিয়ে কত অংশ — এটা আসল
+  সংখ্যা থেকে হিসাব হয়, তাই `REVENUE_SHARE_PERCENT` বদলালেও ওটা বদলায় না।
+- মান না দিলে (বা `100` দিলে) আগের মতোই পুরো টাকা দেখাবে।
+- GitHub Actions-এ চালালে এটাকেও একটা **secret** হিসেবে যোগ করতে হবে (নিচের
+  ৫ক দেখুন), নইলে রিপোর্টে পুরো টাকাই দেখাবে।
+
 ## ৪. লোকালি রান/টেস্ট করা
 
 ```bash
@@ -122,7 +141,9 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
    `ACCOUNT_1_USERNAME`, `ACCOUNT_1_PASSWORD`,
    `ACCOUNT_2_USERNAME`, `ACCOUNT_2_PASSWORD`,
    `ACCOUNT_3_USERNAME`, `ACCOUNT_3_PASSWORD`,
-   `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`।
+   `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`,
+   `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে Total-এ পুরো টাকা
+   দেখাবে)।
    নতুন account যোগ করলে `ACCOUNT_4_...` secrets যোগ করুন এবং
    `.github/workflows/daily-report.yml`-এ সেই env লাইনগুলোও যোগ করুন।
 3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন
