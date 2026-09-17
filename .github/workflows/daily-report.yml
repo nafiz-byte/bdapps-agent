@@ -1,0 +1,33 @@
+name: BDApps Daily Revenue Report
+
+on:
+  schedule:
+    # 00:00 UTC = 06:00 Asia/Dhaka (UTC+6). GitHub may start scheduled runs a few minutes late.
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - run: python workflow.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ACCOUNT_1_USERNAME: ${{ secrets.ACCOUNT_1_USERNAME }}
+          ACCOUNT_1_PASSWORD: ${{ secrets.ACCOUNT_1_PASSWORD }}
+          ACCOUNT_2_USERNAME: ${{ secrets.ACCOUNT_2_USERNAME }}
+          ACCOUNT_2_PASSWORD: ${{ secrets.ACCOUNT_2_PASSWORD }}
+          ACCOUNT_3_USERNAME: ${{ secrets.ACCOUNT_3_USERNAME }}
+          ACCOUNT_3_PASSWORD: ${{ secrets.ACCOUNT_3_PASSWORD }}
+          # New account: add ACCOUNT_4_USERNAME / ACCOUNT_4_PASSWORD here and as repo secrets.
+          TIMEZONE: "Asia/Dhaka"
