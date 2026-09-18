@@ -163,9 +163,15 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
    `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে NetPay লাইন আসবে না)।
    নতুন account যোগ করলে `ACCOUNT_4_...` secrets যোগ করুন এবং
    `.github/workflows/daily-report.yml`-এ সেই env লাইনগুলোও যোগ করুন।
-3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন
-   `00:00 UTC` (= সকাল ৬টা Asia/Dhaka) চালাবে। সময় বদলাতে চাইলে সেই ফাইলের
-   `cron:` লাইন বদলান।
+3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন সকাল
+   **৬:০৭** (Asia/Dhaka) চালাবে, আর **৭:৩৭**-এ একটা backup run থাকে।
+   - GitHub scheduled run-এর কোনো গ্যারান্টি দেয় না — ব্যস্ত সময়ে (বিশেষ করে
+     ঘণ্টার শুরুতে, যেমন ঠিক ৬:০০) run দেরিতে চলে বা একেবারেই চলে না। তাই সময়টা
+     :০০ থেকে সরানো, আর backup রাখা।
+   - Backup run আগে দেখে নেয় আজ সকালের report ইতিমধ্যে গেছে কি না; গিয়ে থাকলে
+     কিছু পাঠায় না, তাই একই report দুইবার আসবে না।
+   - সময় বদলাতে চাইলে সেই ফাইলের দুটো `cron:` লাইনই বদলান (সময় UTC-তে,
+     Dhaka থেকে ৬ ঘণ্টা বাদ দিয়ে; `:00` মিনিট এড়িয়ে চলুন)।
 4. Repo-র **Actions** ট্যাবে গিয়ে "BDApps Daily Revenue Report" workflow-টা
    ম্যানুয়ালি একবার **Run workflow** দিয়ে টেস্ট করে নিন।
 
