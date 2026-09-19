@@ -1,51 +1,18 @@
 name: BDApps Daily Revenue Report
 
+# No `schedule:` trigger on purpose: GitHub never fired this repo's cron
+# (0 of 5 due runs on 2026-09-18/19, under three different times), so the
+# daily run is started from outside by cron-job.org, which calls the
+# workflow_dispatch API at 06:00 Asia/Dhaka -- see README section 5ক.
+# Re-adding a schedule would double-send whenever GitHub does fire it.
 on:
-  schedule:
-    # Asia/Dhaka is UTC+6. GitHub delays -- and at busy times silently drops --
-    # scheduled runs, worst at the top of the hour, so neither entry is on :00.
-    # The second is a backup that only sends if no scheduled report has gone
-    # out yet today (see the "check" job).
-    - cron: "7 0 * * *"    # 06:07 Asia/Dhaka
-    - cron: "37 1 * * *"   # 07:37 Asia/Dhaka, backup
   workflow_dispatch: {}
-
-# Queue overlapping runs instead of running them side by side, so a delayed
-# first run and the backup can't both find "nothing sent yet" and double-send.
-concurrency:
-  group: daily-report
-  cancel-in-progress: false
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      send: ${{ steps.check.outputs.send }}
-    steps:
-      - id: check
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # If the lookup itself fails, count 0 and send: a duplicate report
-          # beats a missing one.
-          sent=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow daily-report.yml \
-            --event schedule --status success --created ">=$(date -u +%F)" \
-            --json databaseId --jq length) || sent=0
-          echo "Scheduled reports already sent today (UTC): $sent"
-          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$sent" -eq 0 ]; then
-            echo "send=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "send=false" >> "$GITHUB_OUTPUT"
-          fi
-
   report:
-    needs: check
-    if: needs.check.outputs.send == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

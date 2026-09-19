@@ -146,8 +146,9 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
 ### ৫ক. GitHub Actions (সুপারিশকৃত)
 
 - সম্পূর্ণ ফ্রি (public বা private দুই repo-তেই দৈনিক এই সাইজের job-এর জন্য)।
-- আপনার PC বন্ধ থাকলেও ঠিক সময়ে চলবে (নিজের PC/cPanel/PythonAnywhere-এর
-  উল্টো, এখানে internet access-এর কোনো whitelist সমস্যা নেই)।
+- আপনার PC বন্ধ থাকলেও ঠিক সময়ে চলবে (সকালের trigger আসে cron-job.org থেকে,
+  নিচে দেখুন; নিজের PC/cPanel/PythonAnywhere-এর উল্টো, এখানে internet
+  access-এর কোনো whitelist সমস্যা নেই)।
 - Chromium লাগে না যেহেতু plain HTTP — তাই সেটআপ আরও সহজ।
 
 ধাপ:
@@ -163,17 +164,38 @@ Login বা scraping ব্যর্থ হলে সেই account-এর জ�
    `REVENUE_SHARE_PERCENT` (যেমন `40` — ৩ক দেখুন; না দিলে NetPay লাইন আসবে না)।
    নতুন account যোগ করলে `ACCOUNT_4_...` secrets যোগ করুন এবং
    `.github/workflows/daily-report.yml`-এ সেই env লাইনগুলোও যোগ করুন।
-3. `.github/workflows/daily-report.yml` ইতিমধ্যে দেওয়া আছে, প্রতিদিন সকাল
-   **৬:০৭** (Asia/Dhaka) চালাবে, আর **৭:৩৭**-এ একটা backup run থাকে।
-   - GitHub scheduled run-এর কোনো গ্যারান্টি দেয় না — ব্যস্ত সময়ে (বিশেষ করে
-     ঘণ্টার শুরুতে, যেমন ঠিক ৬:০০) run দেরিতে চলে বা একেবারেই চলে না। তাই সময়টা
-     :০০ থেকে সরানো, আর backup রাখা।
-   - Backup run আগে দেখে নেয় আজ সকালের report ইতিমধ্যে গেছে কি না; গিয়ে থাকলে
-     কিছু পাঠায় না, তাই একই report দুইবার আসবে না।
-   - সময় বদলাতে চাইলে সেই ফাইলের দুটো `cron:` লাইনই বদলান (সময় UTC-তে,
-     Dhaka থেকে ৬ ঘণ্টা বাদ দিয়ে; `:00` মিনিট এড়িয়ে চলুন)।
-4. Repo-র **Actions** ট্যাবে গিয়ে "BDApps Daily Revenue Report" workflow-টা
+3. Repo-র **Actions** ট্যাবে গিয়ে "BDApps Daily Revenue Report" workflow-টা
    ম্যানুয়ালি একবার **Run workflow** দিয়ে টেস্ট করে নিন।
+4. **প্রতিদিন সকালে চালানো — cron-job.org দিয়ে** (নিচে দেখুন)।
+
+#### প্রতিদিন সকাল ৬টায় কে চালায়: cron-job.org
+
+Workflow-এ GitHub-এর নিজের `schedule:` নেই। এই repo-তে GitHub কখনো
+scheduled run চালায়নি (২০২৬-০৯-১৮ ও ১৯, তিনটা আলাদা সময়ে ৫টা run-এর একটাও
+না, অথচ হাতে চালালে প্রতিবার ঠিক চলে), আর কেন চালায় না সেটা GitHub কোথাও
+দেখায় না। তাই বাইরের একটা ফ্রি সার্ভিস, **cron-job.org**, প্রতিদিন সকাল ৬টায়
+GitHub-কে বলে "Run workflow" চাপতে — হাতে চাপার মতোই।
+
+1. **GitHub token** — <https://github.com/settings/personal-access-tokens/new>:
+   - Repository access: **Only select repositories** → `bdapps-agent`
+   - Permissions → Repository permissions → **Actions: Read and write**
+   - Generate করে token-টা কপি করুন (একবারই দেখায়)। এটা কাউকে দেবেন না,
+     কোথাও commit করবেন না।
+2. **cron-job.org**-এ account খুলে **Create cronjob**:
+   - URL: `https://api.github.com/repos/nafiz-byte/bdapps-agent/actions/workflows/daily-report.yml/dispatches`
+   - Schedule: প্রতিদিন **06:00**, timezone **Asia/Dhaka**
+   - Advanced → Request method: **POST**
+   - Headers:
+     - `Accept: application/vnd.github+json`
+     - `Authorization: Bearer <আপনার token>`
+     - `X-GitHub-Api-Version: 2022-11-28`
+   - Request body: `{"ref":"main"}`
+3. cron-job.org-এ **Test run** দিন — response **204** এলে ঠিক আছে, আর GitHub-এর
+   Actions ট্যাবে একটা নতুন run দেখা যাবে, Telegram-এ report আসবে।
+
+Token-এর মেয়াদ শেষ হলে (তৈরির সময় যে তারিখ দিয়েছিলেন) report বন্ধ হয়ে যাবে
+আর cron-job.org 401 দেখাবে — তখন নতুন token বানিয়ে cron-job.org-এর
+`Authorization` header-এ বসিয়ে দিন।
 
 ### ৫খ. নিজের Windows PC (Task Scheduler)
 
