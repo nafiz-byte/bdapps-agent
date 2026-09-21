@@ -5,7 +5,7 @@ from nodes.schedule import DateRange
 from nodes.telegram import AccountReport, build_sections, format_messages
 
 SEPT = DateRange(date(2026, 9, 1), date(2026, 9, 16))
-HEADER = "📊 <b>BDApps Revenue Report</b>\n📅 16 September 2026"
+HEADER = "📊 <b>BDApps Revenue Report</b>\n🗓️ 16 September 2026"
 
 
 def _app(name, revenue):

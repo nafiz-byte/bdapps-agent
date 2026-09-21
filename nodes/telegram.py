@@ -105,7 +105,7 @@ def build_sections(
         elif net:
             accounts[-1] += "\n" + "\n".join([_DIVIDER, *net])
 
-    header = f"📊 <b>BDApps Revenue Report</b>\n📅 {date_range.date_to.day} {date_range.date_to:%B %Y}"
+    header = f"📊 <b>BDApps Revenue Report</b>\n🗓️ {date_range.date_to.day} {date_range.date_to:%B %Y}"
     sections = [header, *accounts]
     if failed:
         sections.append("\n".join(f"⚠️{_account_label(acc)}: {_esc(acc.error)}" for acc in failed))
