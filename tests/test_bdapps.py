@@ -131,3 +131,87 @@ def test_parse_daily_app_rows_reads_expected_columns():
 def test_parse_daily_app_rows_skips_header_and_short_rows():
     header_html = "<tr><th>Application</th><th>Type</th></tr>"
     assert parse_daily_app_rows(f"<table>{header_html}</table>") == []
+
+
+# --- retries on transient portal failures -----------------------------------
+
+from datetime import date
+
+import pytest
+
+from config import Account
+from nodes import bdapps
+from nodes.bdapps import BdappsError, DailyRow, scrape_account_revenue
+
+ACCOUNT = Account(index=1, name="a", username="u", password="p")
+DAY = date(2026, 9, 1)
+
+
+class _FakePortal:
+    """Stands in for BdappsPortal: replays a scripted list of outcomes, one per login attempt."""
+
+    outcomes: list = []
+    attempts = 0
+
+    def __init__(self, *_args, **_kwargs):
+        type(self).attempts += 1
+        self._outcome = type(self).outcomes[type(self).attempts - 1]
+
+    def login(self):
+        return "ok"
+
+    def daily_app_report(self, *_args):
+        if isinstance(self._outcome, Exception):
+            raise self._outcome
+        return self._outcome
+
+
+@pytest.fixture
+def portal(monkeypatch):
+    _FakePortal.attempts = 0
+    monkeypatch.setattr(bdapps, "BdappsPortal", _FakePortal)
+    return _FakePortal
+
+
+def _row(revenue):
+    return DailyRow("App", "2026-09-01", 0.0, revenue, 0, 0, 0, 0)
+
+
+def test_transient_404_is_retried_until_it_succeeds(portal):
+    portal.outcomes = [
+        BdappsError("bdapps report module returned HTTP 404", transient=True),
+        BdappsError("bdapps report module returned HTTP 404", transient=True),
+        [_row(10.0), _row(5.0)],
+    ]
+    waits = []
+    result = scrape_account_revenue(ACCOUNT, DAY, DAY, retry_delays=(1, 2, 3), sleep=waits.append)
+    assert result.error is None
+    assert result.apps == [{"app_name": "App", "revenue": 15.0}]
+    assert waits == [1, 2]
+
+
+def test_network_errors_are_retried(portal):
+    portal.outcomes = [bdapps.requests.ConnectionError("boom"), [_row(7.0)]]
+    waits = []
+    result = scrape_account_revenue(ACCOUNT, DAY, DAY, retry_delays=(1,), sleep=waits.append)
+    assert result.error is None
+    assert waits == [1]
+
+
+def test_permanent_errors_are_not_retried(portal):
+    portal.outcomes = [BdappsError("login failed: bad password")]
+    waits = []
+    result = scrape_account_revenue(ACCOUNT, DAY, DAY, retry_delays=(1, 2), sleep=waits.append)
+    assert result.error == "login failed: bad password"
+    assert portal.attempts == 1
+    assert waits == []
+
+
+def test_gives_up_with_the_last_error_after_all_retries(portal):
+    err = BdappsError("bdapps report module returned HTTP 404", transient=True)
+    portal.outcomes = [err, err, err]
+    waits = []
+    result = scrape_account_revenue(ACCOUNT, DAY, DAY, retry_delays=(1, 2), sleep=waits.append)
+    assert result.error == "bdapps report module returned HTTP 404"
+    assert portal.attempts == 3
+    assert waits == [1, 2]

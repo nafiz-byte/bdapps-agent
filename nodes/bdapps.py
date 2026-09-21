@@ -19,10 +19,11 @@ from __future__ import annotations
 import html
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 
 import requests
@@ -33,7 +34,15 @@ logger = logging.getLogger(__name__)
 
 
 class BdappsError(RuntimeError):
-    """Raised for any bdapps portal login/scrape failure."""
+    """Raised for any bdapps portal login/scrape failure.
+
+    transient marks failures worth retrying a few minutes later (the portal
+    answering 404/5xx); a wrong password or a changed page layout is not.
+    """
+
+    def __init__(self, message: str, transient: bool = False) -> None:
+        super().__init__(message)
+        self.transient = transient
 
 
 @dataclass
@@ -250,7 +259,7 @@ class BdappsPortal:
         """Log in through bdapps' CAS login form; returns the URL the portal redirected to."""
         page = self.session.get(self.LOGIN_URL, timeout=self.timeout)
         if page.status_code >= 400:
-            raise BdappsError(f"bdapps login page returned HTTP {page.status_code}")
+            raise BdappsError(f"bdapps login page returned HTTP {page.status_code}", transient=page.status_code >= 500)
 
         action = extract_login_form_action(page.text)
         fields = extract_hidden_fields(page.text)
@@ -331,7 +340,10 @@ class BdappsPortal:
         if "/cas/login" in response.url:
             raise BdappsError("bdapps report module sent us back to the login page")
         if response.status_code >= 400:
-            raise BdappsError(f"bdapps report module returned HTTP {response.status_code}")
+            raise BdappsError(
+                f"bdapps report module returned HTTP {response.status_code}",
+                transient=response.status_code == 404 or response.status_code >= 500,
+            )
 
     def _save_debug(self, page_html: str, label: str) -> None:
         """Save page source for inspection when parsing doesn't find what it expects."""
@@ -345,21 +357,45 @@ class BdappsPortal:
             logger.exception("Could not save debug page source")
 
 
-def scrape_account_revenue(account: Account, date_from: date, date_to: date) -> ScrapeResult:
-    """Log in to one bdapps account and return each app's total revenue for the date range."""
-    portal = BdappsPortal(account.username, account.password)
-    try:
-        portal.login()
-        rows = portal.daily_app_report(date_from, date_to)
-    except BdappsError as exc:
-        logger.warning("Account %s: %s", account.name, exc)
-        return ScrapeResult(account_name=account.name, username=account.username, error=str(exc))
-    except requests.RequestException as exc:
-        logger.warning("Account %s: network error: %s", account.name, exc)
-        return ScrapeResult(account_name=account.name, username=account.username, error=f"network error: {exc}")
+# Seconds to wait before each retry. On 2026-09-21 the 06:00 Dhaka run got HTTP
+# 404 from the report module for all three accounts, yet the same code worked
+# fine a few hours later -- so a transient failure is retried rather than
+# reported straight away.
+RETRY_DELAYS: Sequence[float] = (45, 90, 150)
+
+
+def scrape_account_revenue(
+    account: Account,
+    date_from: date,
+    date_to: date,
+    *,
+    retry_delays: Sequence[float] = RETRY_DELAYS,
+    sleep: Callable[[float], None] = time.sleep,
+) -> ScrapeResult:
+    """Log in to one bdapps account and return each app's total revenue for the date range.
+
+    Portal 404/5xx and network errors are retried after each of retry_delays;
+    anything else (bad credentials, changed page layout) fails immediately.
+    """
+    rows: Optional[List[DailyRow]] = None
+    error: Optional[str] = None
+    for attempt in range(len(retry_delays) + 1):
+        portal = BdappsPortal(account.username, account.password)
+        try:
+            portal.login()
+            rows = portal.daily_app_report(date_from, date_to)
+            break
+        except BdappsError as exc:
+            error, transient = str(exc), exc.transient
+        except requests.RequestException as exc:
+            error, transient = f"network error: {exc}", True
+        logger.warning("Account %s (attempt %d): %s", account.name, attempt + 1, error)
+        if not transient or attempt == len(retry_delays):
+            return ScrapeResult(account_name=account.name, username=account.username, error=error)
+        sleep(retry_delays[attempt])
 
     totals: Dict[str, float] = {}
-    for row in rows:
+    for row in rows or []:
         totals[row.app] = totals.get(row.app, 0.0) + row.revenue
 
     apps = [{"app_name": app_name, "revenue": revenue} for app_name, revenue in totals.items()]
