@@ -43,6 +43,74 @@ bdapps-agent/
 └── requirements.txt
 ```
 
+## নতুন user: নিজের জন্য সেটআপ (কোড না লিখে, ~১৫ মিনিট)
+
+অন্য কেউ নিজের bdapps account-এর রিপোর্ট নিজের Telegram-এ পেতে চাইলে নিচের
+ধাপগুলো মেনে চলুন। PC-তে কিছু ইনস্টল করা লাগবে না, সব GitHub-এ চলবে। এই
+repo-র মালিকের password বা token আপনার copy-তে যায় না, আপনি নিজেরগুলো বসাবেন।
+
+লাগবে: একটা GitHub account, Telegram, আপনার bdapps (`user.bdapps.com`) login,
+আর একটা ফ্রি [cron-job.org](https://cron-job.org) account।
+
+### ধাপ ১ — নিজের account-এ repo-র একটা private copy বানান
+
+1. GitHub-এ ডানদিকে উপরে **+ → Import repository** খুলুন।
+2. Old repository URL: `https://github.com/nafiz-byte/bdapps-agent.git`
+3. Repository name: `bdapps-agent`, আর **Private** সিলেক্ট করে **Begin import** দিন।
+
+> Fork-ও করা যায়, কিন্তু public repo-র fork public-ই থাকে, আর fork-এ Actions
+> নিজে থেকে বন্ধ থাকে। Private import-ই সহজ ও নিরাপদ।
+
+### ধাপ ২ — Telegram bot বানান
+
+উপরের [২. Telegram bot বানানো](#২-telegram-bot-বানানো) অংশ দেখুন। শেষে আপনার
+হাতে দুটো জিনিস থাকবে: **bot token** আর **chat ID**।
+
+### ধাপ ৩ — নিজের repo-তে Secrets বসান
+
+নিজের `bdapps-agent` repo-তে **Settings → Secrets and variables → Actions →
+New repository secret** খুলে প্রতিটা আলাদা করে যোগ করুন:
+
+| Secret-এর নাম | কী বসাবেন |
+|---|---|
+| `TELEGRAM_TOKEN` | ধাপ ২-এর bot token |
+| `TELEGRAM_CHAT_ID` | ধাপ ২-এর chat ID |
+| `ACCOUNT_1_USERNAME` | আপনার bdapps login (username/email) |
+| `ACCOUNT_1_PASSWORD` | আপনার bdapps password |
+| `ACCOUNT_2_USERNAME`, `ACCOUNT_2_PASSWORD` | দ্বিতীয় account থাকলে (না থাকলে বাদ দিন) |
+| `ACCOUNT_3_USERNAME`, `ACCOUNT_3_PASSWORD` | তৃতীয় account থাকলে |
+| `REVENUE_SHARE_PERCENT` | ঐচ্ছিক, যেমন `40` ([৩ক](#৩ক-netpay--কমিশন-বাদ-দিয়ে-হাতে-আসা-টাকা) দেখুন) |
+
+তিনটার বেশি account থাকলে `.github/workflows/daily-report.yml`-এর `env:`
+অংশে `ACCOUNT_4_USERNAME` / `ACCOUNT_4_PASSWORD` লাইন যোগ করুন, সাথে সেই
+নামের secret-ও।
+
+### ধাপ ৪ — একবার হাতে চালিয়ে টেস্ট করুন
+
+1. Repo-র **Actions** ট্যাবে যান। "Workflows aren't being run" বা enable করার
+   বাটন দেখালে সেটা চাপুন।
+2. বাঁদিকে **BDApps Daily Revenue Report → Run workflow → Run workflow**।
+3. ২–৩ মিনিটের মধ্যে Telegram-এ রিপোর্ট আসা উচিত। না এলে run-টা খুলে লাল
+   ধাপের log দেখুন। বেশিরভাগ সময় কারণ হয় secret-এর নামে বানান ভুল বা ভুল
+   password।
+
+### ধাপ ৫ — প্রতিদিন সকাল ৬টায় নিজে থেকে চালানো
+
+নিচের [cron-job.org অংশটা](#প্রতিদিন-সকাল-৬টায়-কে-চালায়-cron-joborg) হুবহু
+মেনে চলুন, শুধু দুটো জিনিস নিজের দিয়ে বদলাবেন:
+
+- GitHub token বানানোর সময় repository হিসেবে **নিজের** `bdapps-agent` বেছে নিন।
+- cron-job.org-এর URL-এ `nafiz-byte`-এর জায়গায় **নিজের GitHub username** দিন:
+  `https://api.github.com/repos/<আপনার-username>/bdapps-agent/actions/workflows/daily-report.yml/dispatches`
+
+Test run-এ **204** এলে সব ঠিক আছে, এখন থেকে প্রতিদিন সকালে রিপোর্ট আসবে।
+
+### পরে কোড আপডেট নিতে চাইলে
+
+Import করা copy মূল repo-র নতুন পরিবর্তন নিজে থেকে পায় না। আপডেট লাগলে মূল
+repo থেকে বদলে যাওয়া ফাইলগুলো (সাধারণত `nodes/` ফোল্ডার) নিজের repo-তে কপি
+করে নিন। আপনার secrets আর cron-job.org যেমন আছে তেমনই থাকবে।
+
 ## ১. ইনস্টলেশন (লোকাল, টেস্ট করার জন্য)
 
 ```bash
